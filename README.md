@@ -1,12 +1,33 @@
 # NovaWave Synth
 
-An original, fully free, MIT-licensed semi-modular analog-style synthesizer
-for Android. It is inspired by the general design language of hardware
-semi-modular synths (dual oscillators, resonant filter, dual envelopes, LFO)
-but is an independent implementation: no Moog (or any other manufacturer's)
+An original, fully free, MIT-licensed semi-modular analog-style synthesizer.
+It is inspired by the general design language of hardware semi-modular
+synths (dual oscillators, resonant filter, dual envelopes, LFO) but is an
+independent implementation: no Moog (or any other manufacturer's)
 trademarks, product names, artwork, firmware, or circuit designs are used.
 Everything — DSP code, UI, and branding — was written from scratch for this
 project.
+
+**This repo's primary app is a browser-installable PWA** (same pattern as
+[jannu007/DTM](https://github.com/jannu007/dtm)): open the GitHub Pages URL
+on an Android phone (or desktop), and the browser offers "Install app" /
+"Add to Home screen" — no APK, no Play Store listing, no build step for the
+end user. A from-scratch native Android (Kotlin/Compose) build also lives in
+`android/` for anyone who wants that instead — see `android/README.md`.
+
+## Try it
+
+Once GitHub Pages is enabled for this repository (Settings → Pages → Source:
+**GitHub Actions** — one-time setup, see below), the app is served at:
+
+```
+https://jannu007.github.io/Moog/
+```
+
+On Android Chrome: open that URL → menu (⋮) → **"アプリをインストール" /
+"Install app"**, or use the in-page "📲 インストール" button once your
+browser fires its install prompt. It then behaves like a normal installed
+app (own icon, standalone window, works offline after first load).
 
 ## License / commercial use
 
@@ -17,55 +38,65 @@ proprietary assets, there is nothing to clear before shipping it.
 
 ## Features
 
-- Two band-limited (PolyBLEP) oscillators: sine / triangle / saw / square,
-  each with octave, semitone, fine-tune, and level.
+- Two oscillators (sine / triangle / saw / square), each with octave,
+  semitone, fine-tune, and level.
 - Sub-oscillator and white-noise generator.
-- State-variable filter (low-pass / band-pass / high-pass) with resonance,
-  drive/saturation, key tracking, and dedicated filter envelope.
-- Amplitude ADSR + filter ADSR.
-- LFO (sine/triangle/saw/square) routable to pitch, filter cutoff, and amplitude.
-- Glide/portamento.
-- Built-in feedback delay effect.
-- 8-voice polyphony with voice stealing.
-- Multi-touch on-screen keyboard (chords + glissando via real Android
-  `MotionEvent` pointer tracking, not just single-touch gestures).
+- Resonant filter (low-pass / band-pass / high-pass) with drive/saturation,
+  key tracking, and a dedicated filter envelope.
+- Amplitude ADSR + filter ADSR (control-rate, recomputed every animation
+  frame so knob tweaks are heard immediately, even on a sustained note).
+- LFO (sine/triangle/saw/square) routable to pitch, filter cutoff, and
+  amplitude — via native Web Audio `AudioParam` connections.
+- Glide/portamento, feedback delay effect, soft-clip output limiter.
+- 8-voice polyphony with voice stealing, built on persistent always-running
+  oscillators (the standard low-latency Web Audio synth-voice pattern).
+- Multi-touch on-screen keyboard (chords + glissando via Pointer Events).
 - Four factory presets (Drift Lead, Warm Pad, Sub Bass, Metal Pluck).
-- Knob-based UI built with Jetpack Compose.
+- Installable PWA: manifest, service worker (offline after first load),
+  maskable/adaptive icons.
 
 ## Project layout
 
 ```
-app/src/main/java/com/novawave/synth/
-  audio/     DSP engine: Oscillator, Envelope, StateVariableFilter, Voice, SynthEngine
-  model/     Patch (the live, UI-bound parameter set)
-  ui/        Compose UI: Knob, Controls, PianoKeyboard(View), SynthScreen
-  MainActivity.kt
+index.html, src/main.ts        entry point
+src/audio/
+  types.ts                     Patch shape + default patch
+  presets.ts                   factory presets
+  Envelope.ts                  control-rate ADSR
+  Voice.ts                     one polyphonic voice's Web Audio node graph
+  SynthEngine.ts                AudioContext, voice pool, LFO, delay, master chain
+src/ui/
+  Knob.ts, Keyboard.ts         reusable pointer-driven controls
+  App.ts                       builds and wires the whole UI
+src/styles/main.css
+public/                        manifest.webmanifest, sw.js, icons
+android/                       optional native Kotlin/Compose build (see android/README.md)
 ```
 
-The audio engine renders directly to an `AudioTrack` in streaming mode from a
-dedicated high-priority thread — no third-party audio libraries or native
-code required.
+## Development
 
-## Building
+```
+npm install
+npm run dev       # local dev server
+npm run build     # type-check + production build into dist/
+npm run preview   # serve the production build locally
+```
 
-This is a standard Gradle/Android Studio project:
+Requires a user gesture to start audio (browsers block autoplay) — the app
+shows a "▶ NovaWave Synth を起動" overlay on load; tapping it creates/resumes
+the `AudioContext`.
 
-1. Open the repository root in Android Studio (Koala+ recommended).
-2. Let Gradle sync (requires network access to `google()` and
-   `mavenCentral()` to download the Android Gradle Plugin, Kotlin, and
-   AndroidX/Compose dependencies).
-3. Run the `app` configuration on a device or emulator (min SDK 26 / Android 8.0).
+## Deploying to GitHub Pages
 
-> Note: this sandboxed development environment does not have network access
-> to Google's Maven repository or a local Android SDK installed, so the build
-> could not be executed here. The source follows standard AGP 8.5 / Kotlin
-> 1.9 / Compose conventions and should build cleanly in a normal Android
-> Studio setup.
+`.github/workflows/deploy-pages.yml` builds the Vite project and deploys
+`dist/` on every push to `main`, using GitHub's official Pages Actions
+(`upload-pages-artifact` / `deploy-pages`) — the same mechanism
+[jannu007/DTM](https://github.com/jannu007/dtm) uses. One-time setup:
 
-## Playing it
+1. Push this project to the `main` branch (merge this PR / branch).
+2. In the repo's **Settings → Pages**, set **Source** to **GitHub Actions**.
+3. The workflow runs automatically and publishes to
+   `https://jannu007.github.io/Moog/`.
 
-- Drag any knob vertically to change its value.
-- Tap waveform/filter-mode chips to switch options.
-- Tap preset names along the top to load a factory patch.
-- Play the on-screen keyboard with one or more fingers; "OCT −" / "OCT +"
-  shift the visible keyboard range.
+This step (2) has to be done once by a repo admin in the GitHub UI; it is
+not something that can be automated from a commit.

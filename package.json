@@ -1,0 +1,16 @@
+{
+  "name": "novawave-synth",
+  "version": "1.0.0",
+  "private": true,
+  "description": "無料・商用利用可のオリジナル・セミモジュラーシンセサイザー (Web / Android PWA)",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview --port 4173"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.4",
+    "vite": "^5.4.2"
+  }
+}
