@@ -446,9 +446,6 @@ body {
   gap: 8px;
   flex-wrap: wrap;
 }
-.recorder-clip-top .chip-delete {
-  margin-left: auto;
-}
 .recorder-clip-label {
   font-size: 11px;
   color: var(--ink-dim);
@@ -480,11 +477,53 @@ body {
 }
 .recorder-clip audio {
   height: 32px;
-  max-width: 100%;
-  width: 100%;
+  flex: 1;
+  min-width: 160px;
 }
-.chip-delete {
-  border-left: 3px solid var(--led-red);
+
+.clip-menu {
+  position: relative;
+}
+.clip-menu-btn {
+  padding: 7px 10px;
+  font-size: 15px;
+  line-height: 1;
+  font-weight: 700;
+}
+.clip-menu-dropdown {
+  display: none;
+  position: fixed;
+  z-index: 1000;
+  min-width: 120px;
+  background: linear-gradient(180deg, #3a3128, #241d16);
+  border: 1px solid #0007;
+  border-radius: 8px;
+  box-shadow: 0 6px 16px #0008;
+  overflow: hidden;
+  flex-direction: column;
+}
+.clip-menu-dropdown.open {
+  display: flex;
+}
+.clip-menu-item {
+  display: block;
+  width: 100%;
+  padding: 9px 12px;
+  font-size: 12px;
+  text-align: left;
+  color: #c9c2b3;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-decoration: none;
+  box-sizing: border-box;
+}
+.clip-menu-item:hover,
+.clip-menu-item:active {
+  background: #ffffff14;
+}
+.clip-menu-item-danger {
+  color: #ff9d9d;
 }
 
 /* ---------- keyboard ---------- */

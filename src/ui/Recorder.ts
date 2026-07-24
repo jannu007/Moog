@@ -67,6 +67,15 @@ export function createRecorder(getStream: () => MediaStream | null, getCurrentBp
   list.className = 'recorder-list';
   el.appendChild(list);
 
+  // Close any open clip menu when clicking elsewhere on the page. The dropdown
+  // itself lives in <body> (see addClip), so it must be excluded explicitly.
+  document.addEventListener('click', (e) => {
+    const target = e.target as HTMLElement;
+    if (!target.closest('.clip-menu') && !target.closest('.clip-menu-dropdown')) {
+      document.querySelectorAll('.clip-menu-dropdown.open').forEach((d) => d.classList.remove('open'));
+    }
+  });
+
   let mediaRecorder: MediaRecorder | null = null;
   let chunks: BlobPart[] = [];
   let startTime = 0;
@@ -132,23 +141,58 @@ export function createRecorder(getStream: () => MediaStream | null, getCurrentBp
     syncBtn.textContent = '🔄 同期';
     syncBtn.title = 'このクリップを「共通テンポ」に合わせた新しいクリップを作成します';
 
+    // The dropdown is appended to <body> (position: fixed, positioned via
+    // getBoundingClientRect on open) rather than nested inside the scrolling
+    // clip list, so it isn't clipped by that list's overflow:auto.
+    const menuWrap = document.createElement('div');
+    menuWrap.className = 'clip-menu';
+    const menuBtn = document.createElement('button');
+    menuBtn.className = 'chip clip-menu-btn';
+    menuBtn.textContent = '⋮';
+    menuBtn.title = 'その他の操作';
+    const menuDropdown = document.createElement('div');
+    menuDropdown.className = 'clip-menu-dropdown';
+
     const dl = document.createElement('a');
-    dl.className = 'chip';
+    dl.className = 'clip-menu-item';
     dl.textContent = '⬇ 保存';
     dl.href = url;
     dl.download = `novawave-synth-${Date.now()}.${extFor(blob)}`;
 
-    const deleteBtn = document.createElement('button');
-    deleteBtn.className = 'chip chip-delete';
-    deleteBtn.textContent = '🗑 削除';
-    deleteBtn.title = 'このクリップを削除';
+    const deleteItem = document.createElement('button');
+    deleteItem.className = 'clip-menu-item clip-menu-item-danger';
+    deleteItem.textContent = '🗑 削除';
+
+    menuDropdown.appendChild(dl);
+    menuDropdown.appendChild(deleteItem);
+    menuWrap.appendChild(menuBtn);
+    document.body.appendChild(menuDropdown);
+
+    function closeMenu() {
+      menuDropdown.classList.remove('open');
+    }
+    function openMenu() {
+      document.querySelectorAll('.clip-menu-dropdown.open').forEach((d) => d.classList.remove('open'));
+      const rect = menuBtn.getBoundingClientRect();
+      menuDropdown.style.top = `${rect.bottom + 4}px`;
+      menuDropdown.style.left = `${Math.max(4, rect.right - menuDropdown.offsetWidth || rect.right - 130)}px`;
+      menuDropdown.classList.add('open');
+      const dropdownRect = menuDropdown.getBoundingClientRect();
+      const overflowRight = dropdownRect.right - window.innerWidth + 4;
+      if (overflowRight > 0) menuDropdown.style.left = `${parseFloat(menuDropdown.style.left) - overflowRight}px`;
+    }
+    menuBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (menuDropdown.classList.contains('open')) closeMenu();
+      else openMenu();
+    });
+    dl.addEventListener('click', closeMenu);
+    window.addEventListener('scroll', closeMenu, { passive: true, capture: true });
 
     top.appendChild(checkbox);
     top.appendChild(labelEl);
     top.appendChild(bpmField);
     top.appendChild(syncBtn);
-    top.appendChild(dl);
-    top.appendChild(deleteBtn);
 
     const audio = document.createElement('audio');
     audio.controls = true;
@@ -157,6 +201,7 @@ export function createRecorder(getStream: () => MediaStream | null, getCurrentBp
     const bottom = document.createElement('div');
     bottom.className = 'recorder-clip-bottom';
     bottom.appendChild(audio);
+    bottom.appendChild(menuWrap);
 
     row.appendChild(top);
     row.appendChild(bottom);
@@ -165,10 +210,12 @@ export function createRecorder(getStream: () => MediaStream | null, getCurrentBp
     const clip: Clip = { id: clipCounter, blob, url, label, bpm, row, checkbox };
     clips.unshift(clip);
 
-    deleteBtn.addEventListener('click', () => {
+    deleteItem.addEventListener('click', () => {
+      closeMenu();
       if (!window.confirm(`「${label}」を削除しますか?`)) return;
       URL.revokeObjectURL(url);
       row.remove();
+      menuDropdown.remove();
       const idx = clips.indexOf(clip);
       if (idx !== -1) clips.splice(idx, 1);
       updateMixButton();
