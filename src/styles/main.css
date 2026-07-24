@@ -154,8 +154,7 @@ body {
 /* ---------- chips (buttons) ---------- */
 
 .preset-row,
-.transport-row,
-.song-row {
+.transport-row {
   display: flex;
   gap: 8px;
   overflow-x: auto;
