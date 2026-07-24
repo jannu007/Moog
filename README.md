@@ -56,7 +56,18 @@ proprietary assets, there is nothing to clear before shipping it.
   by an `AnalyserNode`.
 - **Built-in recorder**: captures the live (post-limiter) output via
   `MediaRecorder`, with an in-page player and a download link per take —
-  works for both live playing and demo-song playback.
+  works for both live playing and demo-song playback. Each take remembers
+  the BPM it was recorded at (auto-filled from the playing demo song, or
+  editable by hand).
+- **Tempo sync**: re-renders any recorded take to a common "共通テンポ"
+  target BPM using the browser's own pitch-preserving time-stretch
+  (`HTMLMediaElement.preservesPitch` + `playbackRate`, captured back to a
+  file), so takes recorded at different tempos (e.g. two different demo
+  songs) end up at the same speed.
+- **Mixing**: select two or more recorded takes and mix them down to a
+  single WAV file (decoded and summed offline via `OfflineAudioContext` —
+  fast, no real-time wait). Typical flow: tempo-sync each take to the same
+  BPM first, then mix them together.
 - **3 original demo songs**, composed and sequenced entirely with this
   synth's own engine (see "Demo songs" below): 安曇野の雪 (Snow in Azumino),
   犀川のほとり (Riverside of the Saigawa), 上高地の夜明け (Dawn in
@@ -92,6 +103,9 @@ src/audio/
   presets.ts                   factory presets
   songs.ts                     3 original demo songs (note-event data + patch per song)
   Sequencer.ts                 schedules a Song's notes onto a SynthEngine
+  AudioTools.ts                 offline tempo-sync (playbackRate + preservesPitch,
+                                captured via MediaRecorder) and clip mixing
+                                (OfflineAudioContext + WAV encoder)
   Envelope.ts                  control-rate ADSR
   Voice.ts                     one polyphonic voice's Web Audio node graph
   SynthEngine.ts                AudioContext, voice pool, LFO, delay, master chain,
@@ -99,7 +113,7 @@ src/audio/
 src/ui/
   Knob.ts, Keyboard.ts         reusable pointer-driven controls
   VuMeter.ts                   segmented LED level meter
-  Recorder.ts                  MediaRecorder UI (record/stop/list/download)
+  Recorder.ts                  record/stop/list/download + per-clip tempo sync + mixing
   App.ts                       builds and wires the whole UI
 src/styles/main.css            analog-hardware look (wood/metal/chrome)
 public/                        manifest.webmanifest, sw.js, icons
