@@ -132,15 +132,6 @@ export function createRecorder(getStream: () => MediaStream | null, getCurrentBp
     syncBtn.textContent = '🔄 テンポ同期';
     syncBtn.title = 'このクリップを「共通テンポ」に合わせた新しいクリップを作成します';
 
-    top.appendChild(checkbox);
-    top.appendChild(labelEl);
-    top.appendChild(bpmField);
-    top.appendChild(syncBtn);
-
-    const audio = document.createElement('audio');
-    audio.controls = true;
-    audio.src = url;
-
     const dl = document.createElement('a');
     dl.className = 'chip';
     dl.textContent = '⬇ 保存';
@@ -152,11 +143,20 @@ export function createRecorder(getStream: () => MediaStream | null, getCurrentBp
     deleteBtn.textContent = '🗑 削除';
     deleteBtn.title = 'このクリップを削除';
 
+    top.appendChild(checkbox);
+    top.appendChild(labelEl);
+    top.appendChild(bpmField);
+    top.appendChild(syncBtn);
+    top.appendChild(dl);
+    top.appendChild(deleteBtn);
+
+    const audio = document.createElement('audio');
+    audio.controls = true;
+    audio.src = url;
+
     const bottom = document.createElement('div');
     bottom.className = 'recorder-clip-bottom';
     bottom.appendChild(audio);
-    bottom.appendChild(dl);
-    bottom.appendChild(deleteBtn);
 
     row.appendChild(top);
     row.appendChild(bottom);
