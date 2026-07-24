@@ -1,6 +1,5 @@
 import { SynthEngine } from '../audio/SynthEngine';
 import { factoryPresets } from '../audio/presets';
-import { demoSongs } from '../audio/songs';
 import { SequencerPlayer, type Song } from '../audio/Sequencer';
 import { composePromptSong } from '../audio/aiCompose';
 import { defaultPatch, type FilterMode, type Patch, type Waveform } from '../audio/types';
@@ -253,36 +252,6 @@ export function mountApp(root: HTMLElement): void {
     });
   }
 
-  const songRow = document.createElement('div');
-  songRow.className = 'song-row';
-  const songStatus = document.createElement('div');
-  songStatus.className = 'song-status';
-  const SONG_IDLE_TEXT = 'デモ曲: 停止中';
-  songStatus.textContent = SONG_IDLE_TEXT;
-
-  function renderSongs() {
-    songRow.innerHTML = '';
-    for (const song of demoSongs()) {
-      const btn = document.createElement('button');
-      btn.className = 'chip chip-song';
-      btn.textContent = `▶ ${song.title}`;
-      btn.addEventListener('click', () => {
-        playSong(song, songStatus, SONG_IDLE_TEXT, `${song.title} (demo)`);
-      });
-      songRow.appendChild(btn);
-    }
-    const stopBtn = document.createElement('button');
-    stopBtn.className = 'chip chip-stop';
-    stopBtn.textContent = '■ 停止';
-    stopBtn.addEventListener('click', () => {
-      sequencer.stop();
-      songStatus.textContent = SONG_IDLE_TEXT;
-      aiStatus.textContent = AI_IDLE_TEXT;
-    });
-    songRow.appendChild(stopBtn);
-  }
-  renderSongs();
-
   // --- AI composer: turns a free-text prompt into a procedurally generated song ---
   const aiPanel = document.createElement('div');
   aiPanel.className = 'ai-composer panel';
@@ -335,7 +304,6 @@ export function mountApp(root: HTMLElement): void {
   aiStopBtn.addEventListener('click', () => {
     sequencer.stop();
     aiStatus.textContent = AI_IDLE_TEXT;
-    songStatus.textContent = SONG_IDLE_TEXT;
   });
   aiInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {
@@ -400,8 +368,6 @@ export function mountApp(root: HTMLElement): void {
   root.appendChild(header);
   root.appendChild(presetRow);
   root.appendChild(panels);
-  root.appendChild(songRow);
-  root.appendChild(songStatus);
   root.appendChild(aiPanel);
   root.appendChild(recorder.el);
   root.appendChild(octRow);

@@ -129,7 +129,7 @@ export function createRecorder(getStream: () => MediaStream | null, getCurrentBp
 
     const syncBtn = document.createElement('button');
     syncBtn.className = 'chip chip-sync';
-    syncBtn.textContent = '🔄 テンポ同期';
+    syncBtn.textContent = '🔄 同期';
     syncBtn.title = 'このクリップを「共通テンポ」に合わせた新しいクリップを作成します';
 
     const dl = document.createElement('a');

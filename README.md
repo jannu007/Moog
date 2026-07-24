@@ -56,57 +56,37 @@ proprietary assets, there is nothing to clear before shipping it.
   by an `AnalyserNode`.
 - **Built-in recorder**: captures the live (post-limiter) output via
   `MediaRecorder`, with an in-page player and a download link per take —
-  works for both live playing and demo-song playback. Each take remembers
-  the BPM it was recorded at (auto-filled from the playing demo song, or
-  editable by hand).
+  works for both live playing and AI Composer playback. Each take remembers
+  the BPM it was recorded at (auto-filled from the currently playing song,
+  or editable by hand).
 - **Tempo sync**: re-renders any recorded take to a common "共通テンポ"
   target BPM using the browser's own pitch-preserving time-stretch
   (`HTMLMediaElement.preservesPitch` + `playbackRate`, captured back to a
-  file), so takes recorded at different tempos (e.g. two different demo
-  songs) end up at the same speed.
+  file), so takes recorded at different tempos (e.g. two different AI
+  Composer generations) end up at the same speed.
 - **Mixing**: select two or more recorded takes and mix them down to a
   single WAV file (decoded and summed offline via `OfflineAudioContext` —
   fast, no real-time wait). Typical flow: tempo-sync each take to the same
   BPM first, then mix them together.
-- **3 original demo songs**, composed and sequenced entirely with this
-  synth's own engine (see "Demo songs" below): 安曇野の雪 (Snow in Azumino),
-  犀川のほとり (Riverside of the Saigawa), 上高地の夜明け (Dawn in
-  Kamikochi). Press ▶ on any of them, then use the recorder to save a take.
 - **AI Composer**: type a free-text prompt (mood, scene, tempo — Japanese or
   English) and get a procedurally generated song built from it — chord
   progression, melody, tempo, and patch all derived from the prompt (see
   "AI Composer" below). "🎲 別バージョン" regenerates a different take on
-  the same prompt.
+  the same prompt. Anything it plays can be recorded, tempo-synced, and
+  mixed exactly like live playing.
 - Installable PWA: manifest, service worker (offline after first load),
   maskable/adaptive icons.
-
-## Demo songs
-
-`src/audio/songs.ts` defines three original, short instrumental pieces as
-plain note-event data (no audio files) — each sets its own patch (via
-`Object.assign` onto the live `Patch`) and a list of `{note, startSec,
-durSec}` events, then `SequencerPlayer` (`src/audio/Sequencer.ts`) schedules
-them onto the running `SynthEngine` with `setTimeout`, matching the engine's
-existing control-rate philosophy:
-
-- **安曇野の雪 (Snow in Azumino)** — slow, spacious A-minor pad with a
-  falling bell-like melody.
-- **犀川のほとり (Riverside of the Saigawa)** — brighter, continuously
-  flowing 16th-note arpeggio over C–G–Am–F.
-- **上高地の夜明け (Dawn in Kamikochi)** — slow-swelling pad with a melody
-  that climbs higher through each chord, D–Bm–G–A.
-
-They're original compositions written for this project — no third-party
-melodies, samples, or scores are used.
 
 ## AI Composer
 
 `src/audio/aiCompose.ts` implements `composePromptSong(prompt)`, a small
 **on-device, rule-based generator** — not a call to a hosted LLM/generative-
-audio API. As a static GitHub Pages site, this app has no backend to hold an
-API key, and calling a commercial AI API directly from client-side JS would
-expose it publicly, so instead the "AI" here is a deterministic algorithm
-that:
+audio API, and **entirely free to run**: it's plain client-side JavaScript
+executed in your own browser, with no network request, no API key, no
+account, and no usage limit or cost of any kind. As a static GitHub Pages
+site, this app has no backend to hold an API key, and calling a commercial
+AI API directly from client-side JS would expose it publicly, so instead the
+"AI" here is a deterministic algorithm that:
 
 1. Scans the prompt text for mood/keyword signals (energy, valence
    bright/dark, ambience, complexity — both Japanese and English keywords
@@ -122,9 +102,9 @@ that:
    the oscillator waveforms, filter, envelopes, and delay from the same mood
    values (e.g. brighter → higher cutoff/saw waves, calmer → longer
    attack/release, more "open" → more delay).
-4. Returns a `Song` in the exact same shape as the hand-written demo songs,
-   so it plays through the same `SequencerPlayer` and can be recorded,
-   tempo-synced, and mixed exactly like anything else.
+4. Returns a `Song` (patch + note events) that plays through the same
+   `SequencerPlayer` used for live playing, so it can be recorded,
+   tempo-synced, and mixed exactly like anything else in the app.
 
 ## Project layout
 
@@ -133,8 +113,7 @@ index.html, src/main.ts        entry point
 src/audio/
   types.ts                     Patch shape + default patch
   presets.ts                   factory presets
-  songs.ts                     3 original demo songs (note-event data + patch per song)
-  composeUtils.ts               shared note/chord/clock helpers used by songs.ts and aiCompose.ts
+  composeUtils.ts               shared note/chord/clock helpers used by aiCompose.ts
   aiCompose.ts                  prompt -> Song: on-device rule-based "AI composer"
   Sequencer.ts                 schedules a Song's notes onto a SynthEngine
   AudioTools.ts                 offline tempo-sync (playbackRate + preservesPitch,
