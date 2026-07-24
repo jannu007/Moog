@@ -1,12 +1,18 @@
+# Web app (Vite/TypeScript)
+node_modules/
+dist/
+*.tsbuildinfo
+
+# Android (android/)
 *.iml
-.gradle/
-/local.properties
+android/.gradle/
+android/local.properties
 .idea/
 .DS_Store
-/build
+android/build/
+android/app/build/
 /captures
 .externalNativeBuild
 .cxx
-app/build/
 *.apk
 *.aab
