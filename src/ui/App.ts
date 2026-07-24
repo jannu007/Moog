@@ -1,8 +1,12 @@
 import { SynthEngine } from '../audio/SynthEngine';
 import { factoryPresets } from '../audio/presets';
+import { demoSongs } from '../audio/songs';
+import { SequencerPlayer } from '../audio/Sequencer';
 import { defaultPatch, type FilterMode, type Patch, type Waveform } from '../audio/types';
 import { createKnob } from './Knob';
 import { createKeyboard } from './Keyboard';
+import { createVuMeter } from './VuMeter';
+import { createRecorder } from './Recorder';
 
 const WAVEFORMS: Waveform[] = ['sine', 'triangle', 'sawtooth', 'square'];
 const FILTER_MODES: FilterMode[] = ['lowpass', 'bandpass', 'highpass'];
@@ -13,6 +17,7 @@ export function mountApp(root: HTMLElement): void {
   const patch: Patch = defaultPatch('Drift Lead');
   Object.assign(patch, factoryPresets()[0]);
   const engine = new SynthEngine(patch);
+  const sequencer = new SequencerPlayer(engine);
 
   let lowestNote = 48;
 
@@ -26,6 +31,7 @@ export function mountApp(root: HTMLElement): void {
   startBtn.addEventListener('click', async () => {
     await engine.start();
     overlay.remove();
+    vu.start(() => engine.getAnalyser());
   });
 
   const header = document.createElement('div');
@@ -42,6 +48,9 @@ export function mountApp(root: HTMLElement): void {
   header.appendChild(installBtn);
   setupInstallPrompt(installBtn);
 
+  const vu = createVuMeter();
+  header.appendChild(vu.el);
+
   const presetRow = document.createElement('div');
   presetRow.className = 'preset-row';
   function renderPresets() {
@@ -51,6 +60,7 @@ export function mountApp(root: HTMLElement): void {
       chip.className = 'chip' + (p.name === patch.name ? ' selected' : '');
       chip.textContent = p.name;
       chip.addEventListener('click', () => {
+        sequencer.stop();
         Object.assign(patch, p);
         patchNameEl.textContent = `Patch: ${patch.name}`;
         refreshAllKnobs();
@@ -231,6 +241,43 @@ export function mountApp(root: HTMLElement): void {
     })
   );
 
+  const songRow = document.createElement('div');
+  songRow.className = 'song-row';
+  const songStatus = document.createElement('div');
+  songStatus.className = 'song-status';
+  songStatus.textContent = 'デモ曲: 停止中';
+
+  function renderSongs() {
+    songRow.innerHTML = '';
+    for (const song of demoSongs()) {
+      const btn = document.createElement('button');
+      btn.className = 'chip chip-song';
+      btn.textContent = `▶ ${song.title}`;
+      btn.addEventListener('click', () => {
+        Object.assign(patch, song.patch);
+        patchNameEl.textContent = `Patch: ${song.title} (demo)`;
+        refreshAllKnobs();
+        renderPresets();
+        songStatus.textContent = `再生中: ${song.title} — ${song.subtitle}`;
+        sequencer.play(song, () => {
+          songStatus.textContent = 'デモ曲: 停止中';
+        });
+      });
+      songRow.appendChild(btn);
+    }
+    const stopBtn = document.createElement('button');
+    stopBtn.className = 'chip chip-stop';
+    stopBtn.textContent = '■ 停止';
+    stopBtn.addEventListener('click', () => {
+      sequencer.stop();
+      songStatus.textContent = 'デモ曲: 停止中';
+    });
+    songRow.appendChild(stopBtn);
+  }
+  renderSongs();
+
+  const recorder = createRecorder(() => engine.getRecordingStream());
+
   const octRow = document.createElement('div');
   octRow.className = 'oct-row';
   const octDown = document.createElement('button');
@@ -277,13 +324,19 @@ export function mountApp(root: HTMLElement): void {
   root.appendChild(header);
   root.appendChild(presetRow);
   root.appendChild(panels);
+  root.appendChild(songRow);
+  root.appendChild(songStatus);
+  root.appendChild(recorder.el);
   root.appendChild(octRow);
   root.appendChild(keyboardHandle.el);
   root.appendChild(hint);
   root.appendChild(overlay);
 
   document.addEventListener('visibilitychange', () => {
-    if (document.hidden) engine.allNotesOff();
+    if (document.hidden) {
+      sequencer.stop();
+      engine.allNotesOff();
+    }
   });
 }
 

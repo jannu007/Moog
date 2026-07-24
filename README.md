@@ -17,8 +17,7 @@ end user. A from-scratch native Android (Kotlin/Compose) build also lives in
 
 ## Try it
 
-Once GitHub Pages is enabled for this repository (Settings → Pages → Source:
-**GitHub Actions** — one-time setup, see below), the app is served at:
+The app is live at:
 
 ```
 https://jannu007.github.io/Moog/
@@ -52,8 +51,37 @@ proprietary assets, there is nothing to clear before shipping it.
   oscillators (the standard low-latency Web Audio synth-voice pattern).
 - Multi-touch on-screen keyboard (chords + glissando via Pointer Events).
 - Four factory presets (Drift Lead, Warm Pad, Sub Bass, Metal Pluck).
+- **Analog-hardware styled UI**: wood-grain chassis, brushed-metal panels,
+  chrome knobs, an LED power indicator, and a live segmented VU meter driven
+  by an `AnalyserNode`.
+- **Built-in recorder**: captures the live (post-limiter) output via
+  `MediaRecorder`, with an in-page player and a download link per take —
+  works for both live playing and demo-song playback.
+- **3 original demo songs**, composed and sequenced entirely with this
+  synth's own engine (see "Demo songs" below): 安曇野の雪 (Snow in Azumino),
+  犀川のほとり (Riverside of the Saigawa), 上高地の夜明け (Dawn in
+  Kamikochi). Press ▶ on any of them, then use the recorder to save a take.
 - Installable PWA: manifest, service worker (offline after first load),
   maskable/adaptive icons.
+
+## Demo songs
+
+`src/audio/songs.ts` defines three original, short instrumental pieces as
+plain note-event data (no audio files) — each sets its own patch (via
+`Object.assign` onto the live `Patch`) and a list of `{note, startSec,
+durSec}` events, then `SequencerPlayer` (`src/audio/Sequencer.ts`) schedules
+them onto the running `SynthEngine` with `setTimeout`, matching the engine's
+existing control-rate philosophy:
+
+- **安曇野の雪 (Snow in Azumino)** — slow, spacious A-minor pad with a
+  falling bell-like melody.
+- **犀川のほとり (Riverside of the Saigawa)** — brighter, continuously
+  flowing 16th-note arpeggio over C–G–Am–F.
+- **上高地の夜明け (Dawn in Kamikochi)** — slow-swelling pad with a melody
+  that climbs higher through each chord, D–Bm–G–A.
+
+They're original compositions written for this project — no third-party
+melodies, samples, or scores are used.
 
 ## Project layout
 
@@ -62,13 +90,18 @@ index.html, src/main.ts        entry point
 src/audio/
   types.ts                     Patch shape + default patch
   presets.ts                   factory presets
+  songs.ts                     3 original demo songs (note-event data + patch per song)
+  Sequencer.ts                 schedules a Song's notes onto a SynthEngine
   Envelope.ts                  control-rate ADSR
   Voice.ts                     one polyphonic voice's Web Audio node graph
-  SynthEngine.ts                AudioContext, voice pool, LFO, delay, master chain
+  SynthEngine.ts                AudioContext, voice pool, LFO, delay, master chain,
+                                analyser + MediaStream tap for recording
 src/ui/
   Knob.ts, Keyboard.ts         reusable pointer-driven controls
+  VuMeter.ts                   segmented LED level meter
+  Recorder.ts                  MediaRecorder UI (record/stop/list/download)
   App.ts                       builds and wires the whole UI
-src/styles/main.css
+src/styles/main.css            analog-hardware look (wood/metal/chrome)
 public/                        manifest.webmanifest, sw.js, icons
 android/                       optional native Kotlin/Compose build (see android/README.md)
 ```
@@ -91,12 +124,5 @@ the `AudioContext`.
 `.github/workflows/deploy-pages.yml` builds the Vite project and deploys
 `dist/` on every push to `main`, using GitHub's official Pages Actions
 (`upload-pages-artifact` / `deploy-pages`) — the same mechanism
-[jannu007/DTM](https://github.com/jannu007/dtm) uses. One-time setup:
-
-1. Push this project to the `main` branch (merge this PR / branch).
-2. In the repo's **Settings → Pages**, set **Source** to **GitHub Actions**.
-3. The workflow runs automatically and publishes to
-   `https://jannu007.github.io/Moog/`.
-
-This step (2) has to be done once by a repo admin in the GitHub UI; it is
-not something that can be automated from a commit.
+[jannu007/DTM](https://github.com/jannu007/dtm) uses. Already set up and
+live for this repo; every merge to `main` redeploys automatically.

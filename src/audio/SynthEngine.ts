@@ -18,6 +18,8 @@ export class SynthEngine {
   private wetGain: GainNode | null = null;
   private delayNode: DelayNode | null = null;
   private feedbackGain: GainNode | null = null;
+  private analyser: AnalyserNode | null = null;
+  private recordDestination: MediaStreamAudioDestinationNode | null = null;
 
   private rafId = 0;
   private lastTime = 0;
@@ -62,11 +64,21 @@ export class SynthEngine {
     masterGain.connect(limiter);
     limiter.connect(ctx.destination);
 
+    const analyser = ctx.createAnalyser();
+    analyser.fftSize = 512;
+    analyser.smoothingTimeConstant = 0.75;
+    limiter.connect(analyser);
+
+    const recordDestination = ctx.createMediaStreamDestination();
+    limiter.connect(recordDestination);
+
     this.masterGain = masterGain;
     this.dryGain = dryGain;
     this.wetGain = wetGain;
     this.delayNode = delayNode;
     this.feedbackGain = feedbackGain;
+    this.analyser = analyser;
+    this.recordDestination = recordDestination;
 
     const lfo = ctx.createOscillator();
     lfo.type = this.patch.lfoWaveform;
@@ -128,6 +140,16 @@ export class SynthEngine {
 
   allNotesOff(): void {
     for (const v of this.voices) v.hardStopAllNotes();
+  }
+
+  /** For a VU meter / level display; null until start() has run. */
+  getAnalyser(): AnalyserNode | null {
+    return this.analyser;
+  }
+
+  /** Live MediaStream of the final (post-limiter) output, for MediaRecorder. */
+  getRecordingStream(): MediaStream | null {
+    return this.recordDestination?.stream ?? null;
   }
 }
 
