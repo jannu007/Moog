@@ -1,0 +1,5 @@
+<resources>
+    <color name="synth_background">#FF14161A</color>
+    <color name="synth_panel">#FF1E2126</color>
+    <color name="synth_accent">#FFFF8A3D</color>
+</resources>
