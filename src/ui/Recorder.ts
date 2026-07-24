@@ -147,13 +147,33 @@ export function createRecorder(getStream: () => MediaStream | null, getCurrentBp
     dl.href = url;
     dl.download = `novawave-synth-${Date.now()}.${extFor(blob)}`;
 
+    const deleteBtn = document.createElement('button');
+    deleteBtn.className = 'chip chip-delete';
+    deleteBtn.textContent = '🗑 削除';
+    deleteBtn.title = 'このクリップを削除';
+
+    const bottom = document.createElement('div');
+    bottom.className = 'recorder-clip-bottom';
+    bottom.appendChild(audio);
+    bottom.appendChild(dl);
+    bottom.appendChild(deleteBtn);
+
     row.appendChild(top);
-    row.appendChild(audio);
-    row.appendChild(dl);
+    row.appendChild(bottom);
     list.prepend(row);
 
     const clip: Clip = { id: clipCounter, blob, url, label, bpm, row, checkbox };
     clips.unshift(clip);
+
+    deleteBtn.addEventListener('click', () => {
+      if (!window.confirm(`「${label}」を削除しますか?`)) return;
+      URL.revokeObjectURL(url);
+      row.remove();
+      const idx = clips.indexOf(clip);
+      if (idx !== -1) clips.splice(idx, 1);
+      updateMixButton();
+      setStatus(`「${label}」を削除しました。`);
+    });
 
     syncBtn.addEventListener('click', async () => {
       const targetBpm = Number(bpmInput.value) || DEFAULT_BPM;
