@@ -1,7 +1,8 @@
 import { SynthEngine } from '../audio/SynthEngine';
 import { factoryPresets } from '../audio/presets';
 import { demoSongs } from '../audio/songs';
-import { SequencerPlayer } from '../audio/Sequencer';
+import { SequencerPlayer, type Song } from '../audio/Sequencer';
+import { composePromptSong } from '../audio/aiCompose';
 import { defaultPatch, type FilterMode, type Patch, type Waveform } from '../audio/types';
 import { createKnob } from './Knob';
 import { createKeyboard } from './Keyboard';
@@ -241,11 +242,23 @@ export function mountApp(root: HTMLElement): void {
     })
   );
 
+  function playSong(song: Song, statusEl: HTMLElement, idleText: string, label: string) {
+    Object.assign(patch, song.patch);
+    patchNameEl.textContent = `Patch: ${label}`;
+    refreshAllKnobs();
+    renderPresets();
+    statusEl.textContent = `再生中: ${song.title} — ${song.subtitle}`;
+    sequencer.play(song, () => {
+      statusEl.textContent = idleText;
+    });
+  }
+
   const songRow = document.createElement('div');
   songRow.className = 'song-row';
   const songStatus = document.createElement('div');
   songStatus.className = 'song-status';
-  songStatus.textContent = 'デモ曲: 停止中';
+  const SONG_IDLE_TEXT = 'デモ曲: 停止中';
+  songStatus.textContent = SONG_IDLE_TEXT;
 
   function renderSongs() {
     songRow.innerHTML = '';
@@ -254,14 +267,7 @@ export function mountApp(root: HTMLElement): void {
       btn.className = 'chip chip-song';
       btn.textContent = `▶ ${song.title}`;
       btn.addEventListener('click', () => {
-        Object.assign(patch, song.patch);
-        patchNameEl.textContent = `Patch: ${song.title} (demo)`;
-        refreshAllKnobs();
-        renderPresets();
-        songStatus.textContent = `再生中: ${song.title} — ${song.subtitle}`;
-        sequencer.play(song, () => {
-          songStatus.textContent = 'デモ曲: 停止中';
-        });
+        playSong(song, songStatus, SONG_IDLE_TEXT, `${song.title} (demo)`);
       });
       songRow.appendChild(btn);
     }
@@ -270,11 +276,78 @@ export function mountApp(root: HTMLElement): void {
     stopBtn.textContent = '■ 停止';
     stopBtn.addEventListener('click', () => {
       sequencer.stop();
-      songStatus.textContent = 'デモ曲: 停止中';
+      songStatus.textContent = SONG_IDLE_TEXT;
+      aiStatus.textContent = AI_IDLE_TEXT;
     });
     songRow.appendChild(stopBtn);
   }
   renderSongs();
+
+  // --- AI composer: turns a free-text prompt into a procedurally generated song ---
+  const aiPanel = document.createElement('div');
+  aiPanel.className = 'ai-composer panel';
+  const aiTitle = document.createElement('div');
+  aiTitle.className = 'panel-title';
+  aiTitle.textContent = 'AI COMPOSER';
+  const aiHint = document.createElement('div');
+  aiHint.className = 'ai-hint';
+  aiHint.textContent = '例: 「悲しい冬の夜」「楽しく踊れる曲」「静かな朝の海辺」— キーワードから曲想・テンポ・音色を自動生成します。';
+  const aiRow = document.createElement('div');
+  aiRow.className = 'ai-row';
+  const aiInput = document.createElement('input');
+  aiInput.type = 'text';
+  aiInput.className = 'ai-prompt-input';
+  aiInput.placeholder = '曲のイメージを入力…';
+  aiInput.maxLength = 80;
+  const aiGenerateBtn = document.createElement('button');
+  aiGenerateBtn.className = 'chip chip-song';
+  aiGenerateBtn.textContent = '🎼 作曲して再生';
+  const aiRerollBtn = document.createElement('button');
+  aiRerollBtn.className = 'chip';
+  aiRerollBtn.textContent = '🎲 別バージョン';
+  const aiStopBtn = document.createElement('button');
+  aiStopBtn.className = 'chip chip-stop';
+  aiStopBtn.textContent = '■ 停止';
+  aiRow.appendChild(aiInput);
+  aiRow.appendChild(aiGenerateBtn);
+  aiRow.appendChild(aiRerollBtn);
+  aiRow.appendChild(aiStopBtn);
+  const aiStatus = document.createElement('div');
+  aiStatus.className = 'song-status';
+  const AI_IDLE_TEXT = 'AI作曲: 未生成';
+  aiStatus.textContent = AI_IDLE_TEXT;
+
+  let variationSeed = 0;
+  function generateAndPlay() {
+    const promptText = aiInput.value;
+    const seeded = variationSeed > 0 ? `${promptText}#${variationSeed}` : promptText;
+    const song = composePromptSong(seeded);
+    playSong(song, aiStatus, AI_IDLE_TEXT, `AI: ${song.title}`);
+  }
+  aiGenerateBtn.addEventListener('click', () => {
+    variationSeed = 0;
+    generateAndPlay();
+  });
+  aiRerollBtn.addEventListener('click', () => {
+    variationSeed += 1;
+    generateAndPlay();
+  });
+  aiStopBtn.addEventListener('click', () => {
+    sequencer.stop();
+    aiStatus.textContent = AI_IDLE_TEXT;
+    songStatus.textContent = SONG_IDLE_TEXT;
+  });
+  aiInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      variationSeed = 0;
+      generateAndPlay();
+    }
+  });
+
+  aiPanel.appendChild(aiTitle);
+  aiPanel.appendChild(aiHint);
+  aiPanel.appendChild(aiRow);
+  aiPanel.appendChild(aiStatus);
 
   const recorder = createRecorder(
     () => engine.getRecordingStream(),
@@ -329,6 +402,7 @@ export function mountApp(root: HTMLElement): void {
   root.appendChild(panels);
   root.appendChild(songRow);
   root.appendChild(songStatus);
+  root.appendChild(aiPanel);
   root.appendChild(recorder.el);
   root.appendChild(octRow);
   root.appendChild(keyboardHandle.el);

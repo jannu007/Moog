@@ -72,6 +72,11 @@ proprietary assets, there is nothing to clear before shipping it.
   synth's own engine (see "Demo songs" below): 安曇野の雪 (Snow in Azumino),
   犀川のほとり (Riverside of the Saigawa), 上高地の夜明け (Dawn in
   Kamikochi). Press ▶ on any of them, then use the recorder to save a take.
+- **AI Composer**: type a free-text prompt (mood, scene, tempo — Japanese or
+  English) and get a procedurally generated song built from it — chord
+  progression, melody, tempo, and patch all derived from the prompt (see
+  "AI Composer" below). "🎲 別バージョン" regenerates a different take on
+  the same prompt.
 - Installable PWA: manifest, service worker (offline after first load),
   maskable/adaptive icons.
 
@@ -94,6 +99,33 @@ existing control-rate philosophy:
 They're original compositions written for this project — no third-party
 melodies, samples, or scores are used.
 
+## AI Composer
+
+`src/audio/aiCompose.ts` implements `composePromptSong(prompt)`, a small
+**on-device, rule-based generator** — not a call to a hosted LLM/generative-
+audio API. As a static GitHub Pages site, this app has no backend to hold an
+API key, and calling a commercial AI API directly from client-side JS would
+expose it publicly, so instead the "AI" here is a deterministic algorithm
+that:
+
+1. Scans the prompt text for mood/keyword signals (energy, valence
+   bright/dark, ambience, complexity — both Japanese and English keywords
+   are recognized, e.g. 悲しい/sad, 楽しい/happy, 静か/calm, 速い/fast, 広
+   い/open) and falls back to a pseudo-random mood if nothing matches, so
+   any input still produces a distinct song.
+2. Hashes the prompt to seed a PRNG (`mulberry32`), so the **same prompt
+   always produces the same song** — this is what makes results
+   reproducible rather than a black box; "🎲 別バージョン" reseeds with a
+   variation counter for a different take on the same prompt.
+3. Picks a key, scale (major for a bright/positive mood, minor otherwise),
+   chord progression, tempo, and a biased-random-walk melody, then derives
+   the oscillator waveforms, filter, envelopes, and delay from the same mood
+   values (e.g. brighter → higher cutoff/saw waves, calmer → longer
+   attack/release, more "open" → more delay).
+4. Returns a `Song` in the exact same shape as the hand-written demo songs,
+   so it plays through the same `SequencerPlayer` and can be recorded,
+   tempo-synced, and mixed exactly like anything else.
+
 ## Project layout
 
 ```
@@ -102,6 +134,8 @@ src/audio/
   types.ts                     Patch shape + default patch
   presets.ts                   factory presets
   songs.ts                     3 original demo songs (note-event data + patch per song)
+  composeUtils.ts               shared note/chord/clock helpers used by songs.ts and aiCompose.ts
+  aiCompose.ts                  prompt -> Song: on-device rule-based "AI composer"
   Sequencer.ts                 schedules a Song's notes onto a SynthEngine
   AudioTools.ts                 offline tempo-sync (playbackRate + preservesPitch,
                                 captured via MediaRecorder) and clip mixing

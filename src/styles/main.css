@@ -343,6 +343,32 @@ body {
   font-family: 'Consolas', monospace;
 }
 
+/* ---------- AI composer ---------- */
+
+.ai-composer {
+  min-width: 0;
+}
+.ai-hint {
+  font-size: 10px;
+  color: var(--ink-faint);
+}
+.ai-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.ai-prompt-input {
+  flex: 1;
+  min-width: 180px;
+  font-size: 13px;
+  padding: 7px 10px;
+  border-radius: 8px;
+  border: 1px solid #0004;
+  background: #fffdf8;
+  color: var(--ink);
+}
+
 /* ---------- recorder ---------- */
 
 .recorder {
@@ -421,6 +447,9 @@ body {
   gap: 8px;
   flex-wrap: wrap;
 }
+.recorder-clip-top .chip-delete {
+  margin-left: auto;
+}
 .recorder-clip-label {
   font-size: 11px;
   color: var(--ink-dim);
@@ -452,13 +481,11 @@ body {
 }
 .recorder-clip audio {
   height: 32px;
-  max-width: 320px;
-  flex: 1;
-  min-width: 160px;
+  max-width: 100%;
+  width: 100%;
 }
 .chip-delete {
   border-left: 3px solid var(--led-red);
-  margin-left: auto;
 }
 
 /* ---------- keyboard ---------- */
