@@ -1,9 +1,23 @@
+import { decodeClip, mixBuffers, pickRecorderMimeType, syncClipTempo } from '../audio/AudioTools';
+
 export interface RecorderHandle {
   el: HTMLDivElement;
 }
 
-/** Records the synth's live output (via MediaRecorder) into a downloadable list of clips. */
-export function createRecorder(getStream: () => MediaStream | null): RecorderHandle {
+interface Clip {
+  id: number;
+  blob: Blob;
+  url: string;
+  label: string;
+  bpm: number;
+  row: HTMLDivElement;
+  checkbox: HTMLInputElement;
+}
+
+const DEFAULT_BPM = 120;
+
+/** Records the synth's live output, and lets the user tempo-sync and mix recorded clips. */
+export function createRecorder(getStream: () => MediaStream | null, getCurrentBpm: () => number | null): RecorderHandle {
   const el = document.createElement('div');
   el.className = 'recorder panel';
 
@@ -20,9 +34,34 @@ export function createRecorder(getStream: () => MediaStream | null): RecorderHan
   const timeEl = document.createElement('div');
   timeEl.className = 'recorder-time';
   timeEl.textContent = '00:00';
+
+  const bpmLabel = document.createElement('label');
+  bpmLabel.className = 'recorder-bpm-label';
+  bpmLabel.textContent = '共通テンポ';
+  const bpmInput = document.createElement('input');
+  bpmInput.type = 'number';
+  bpmInput.className = 'recorder-bpm-input';
+  bpmInput.min = '40';
+  bpmInput.max = '240';
+  bpmInput.value = String(DEFAULT_BPM);
+  bpmLabel.appendChild(bpmInput);
+
   controls.appendChild(recBtn);
   controls.appendChild(timeEl);
+  controls.appendChild(bpmLabel);
   el.appendChild(controls);
+
+  const mixRow = document.createElement('div');
+  mixRow.className = 'recorder-mix-row';
+  const mixBtn = document.createElement('button');
+  mixBtn.className = 'chip chip-mix';
+  mixBtn.textContent = '🎚 選択したクリップをミックス';
+  mixBtn.disabled = true;
+  const statusEl = document.createElement('div');
+  statusEl.className = 'recorder-status';
+  mixRow.appendChild(mixBtn);
+  mixRow.appendChild(statusEl);
+  el.appendChild(mixRow);
 
   const list = document.createElement('div');
   list.className = 'recorder-list';
@@ -32,7 +71,8 @@ export function createRecorder(getStream: () => MediaStream | null): RecorderHan
   let chunks: BlobPart[] = [];
   let startTime = 0;
   let timerId = 0;
-  let clipCount = 0;
+  let clipCounter = 0;
+  const clips: Clip[] = [];
 
   function formatTime(sec: number): string {
     const m = Math.floor(sec / 60);
@@ -40,23 +80,62 @@ export function createRecorder(getStream: () => MediaStream | null): RecorderHan
     return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
   }
 
-  function pickMimeType(): string {
-    const candidates = ['audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus'];
-    for (const c of candidates) {
-      if (typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported?.(c)) return c;
-    }
-    return '';
+  function setStatus(text: string) {
+    statusEl.textContent = text;
   }
 
-  function addClip(blob: Blob) {
-    clipCount += 1;
+  function updateMixButton() {
+    const selected = clips.filter((c) => c.checkbox.checked).length;
+    mixBtn.disabled = selected < 2;
+    mixBtn.textContent = selected >= 2 ? `🎚 選択した${selected}件をミックス` : '🎚 選択したクリップをミックス';
+  }
+
+  function extFor(blob: Blob): string {
+    if (blob.type.includes('wav')) return 'wav';
+    if (blob.type.includes('ogg')) return 'ogg';
+    return 'webm';
+  }
+
+  function addClip(blob: Blob, label: string, bpm: number): Clip {
+    clipCounter += 1;
     const url = URL.createObjectURL(blob);
     const row = document.createElement('div');
     row.className = 'recorder-clip';
 
-    const label = document.createElement('div');
-    label.className = 'recorder-clip-label';
-    label.textContent = `録音 ${clipCount}`;
+    const top = document.createElement('div');
+    top.className = 'recorder-clip-top';
+
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.title = 'ミックスに含める';
+    checkbox.addEventListener('change', updateMixButton);
+
+    const labelEl = document.createElement('div');
+    labelEl.className = 'recorder-clip-label';
+    labelEl.textContent = label;
+
+    const bpmField = document.createElement('label');
+    bpmField.className = 'recorder-clip-bpm';
+    bpmField.textContent = 'BPM';
+    const bpmNumberInput = document.createElement('input');
+    bpmNumberInput.type = 'number';
+    bpmNumberInput.min = '40';
+    bpmNumberInput.max = '240';
+    bpmNumberInput.value = String(bpm);
+    bpmNumberInput.addEventListener('change', () => {
+      clip.bpm = Number(bpmNumberInput.value) || DEFAULT_BPM;
+    });
+    bpmField.appendChild(bpmNumberInput);
+
+    const syncBtn = document.createElement('button');
+    syncBtn.className = 'chip chip-sync';
+    syncBtn.textContent = '🔄 テンポ同期';
+    syncBtn.title = 'このクリップを「共通テンポ」に合わせた新しいクリップを作成します';
+
+    top.appendChild(checkbox);
+    top.appendChild(labelEl);
+    top.appendChild(bpmField);
+    top.appendChild(syncBtn);
 
     const audio = document.createElement('audio');
     audio.controls = true;
@@ -66,14 +145,51 @@ export function createRecorder(getStream: () => MediaStream | null): RecorderHan
     dl.className = 'chip';
     dl.textContent = '⬇ 保存';
     dl.href = url;
-    const ext = blob.type.includes('ogg') ? 'ogg' : 'webm';
-    dl.download = `novawave-synth-${Date.now()}.${ext}`;
+    dl.download = `novawave-synth-${Date.now()}.${extFor(blob)}`;
 
-    row.appendChild(label);
+    row.appendChild(top);
     row.appendChild(audio);
     row.appendChild(dl);
     list.prepend(row);
+
+    const clip: Clip = { id: clipCounter, blob, url, label, bpm, row, checkbox };
+    clips.unshift(clip);
+
+    syncBtn.addEventListener('click', async () => {
+      const targetBpm = Number(bpmInput.value) || DEFAULT_BPM;
+      syncBtn.disabled = true;
+      setStatus(`「${label}」を ${clip.bpm} → ${targetBpm} BPM に同期中… (再生時間分お待ちください)`);
+      try {
+        const synced = await syncClipTempo(clip.blob, clip.bpm, targetBpm);
+        addClip(synced, `${label} (→${targetBpm}BPM)`, targetBpm);
+        setStatus('テンポ同期が完了しました。');
+      } catch (err) {
+        setStatus(`テンポ同期に失敗しました: ${(err as Error).message}`);
+      } finally {
+        syncBtn.disabled = false;
+      }
+    });
+
+    return clip;
   }
+
+  mixBtn.addEventListener('click', async () => {
+    const selected = clips.filter((c) => c.checkbox.checked);
+    if (selected.length < 2) return;
+    mixBtn.disabled = true;
+    setStatus(`${selected.length}件のクリップをミックス中…`);
+    try {
+      const buffers = await Promise.all(selected.map((c) => decodeClip(c.blob)));
+      const mixed = await mixBuffers(buffers);
+      const targetBpm = Number(bpmInput.value) || DEFAULT_BPM;
+      addClip(mixed, `ミックス (${selected.map((c) => c.label).join(' + ')})`, targetBpm);
+      setStatus('ミックスが完了しました。');
+    } catch (err) {
+      setStatus(`ミックスに失敗しました: ${(err as Error).message}`);
+    } finally {
+      updateMixButton();
+    }
+  });
 
   recBtn.addEventListener('click', () => {
     if (mediaRecorder && mediaRecorder.state === 'recording') {
@@ -83,7 +199,7 @@ export function createRecorder(getStream: () => MediaStream | null): RecorderHan
     const stream = getStream();
     if (!stream) return;
 
-    const mimeType = pickMimeType();
+    const mimeType = pickRecorderMimeType();
     chunks = [];
     mediaRecorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
     mediaRecorder.ondataavailable = (e) => {
@@ -91,7 +207,8 @@ export function createRecorder(getStream: () => MediaStream | null): RecorderHan
     };
     mediaRecorder.onstop = () => {
       const blob = new Blob(chunks, { type: mediaRecorder!.mimeType || 'audio/webm' });
-      addClip(blob);
+      const bpm = getCurrentBpm() ?? (Number(bpmInput.value) || DEFAULT_BPM);
+      addClip(blob, `録音 ${clipCounter + 1}`, bpm);
       recBtn.textContent = '⏺ 録音開始';
       recBtn.classList.remove('recording');
       window.clearInterval(timerId);

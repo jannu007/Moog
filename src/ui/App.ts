@@ -276,7 +276,10 @@ export function mountApp(root: HTMLElement): void {
   }
   renderSongs();
 
-  const recorder = createRecorder(() => engine.getRecordingStream());
+  const recorder = createRecorder(
+    () => engine.getRecordingStream(),
+    () => sequencer.playingSong?.bpm ?? null
+  );
 
   const octRow = document.createElement('div');
   octRow.className = 'oct-row';
