@@ -46,7 +46,12 @@ proprietary assets, there is nothing to clear before shipping it.
   frame so knob tweaks are heard immediately, even on a sustained note).
 - LFO (sine/triangle/saw/square) routable to pitch, filter cutoff, and
   amplitude — via native Web Audio `AudioParam` connections.
-- Glide/portamento, feedback delay effect, soft-clip output limiter.
+- Glide/portamento, soft-clip output limiter.
+- **Effects chain** (voices → distortion → chorus → delay → tremolo →
+  master): **Distortion** (drive amount + dry/wet mix through a fixed
+  saturating `WaveShaperNode` curve), **Chorus** (short modulated delay —
+  rate/depth/mix — via an LFO driving `DelayNode.delayTime`), feedback
+  **Delay**, and **Tremolo** (rate/depth amplitude modulation).
 - 8-voice polyphony with voice stealing, built on persistent always-running
   oscillators (the standard low-latency Web Audio synth-voice pattern).
 - Multi-touch on-screen keyboard (chords + glissando via Pointer Events).
@@ -54,57 +59,20 @@ proprietary assets, there is nothing to clear before shipping it.
 - **Analog-hardware styled UI**: wood-grain chassis, brushed-metal panels,
   chrome knobs, an LED power indicator, and a live segmented VU meter driven
   by an `AnalyserNode`.
-- **Built-in recorder**: captures the live (post-limiter) output via
-  `MediaRecorder`, with an in-page player and a download link per take —
-  works for both live playing and AI Composer playback. Each take remembers
-  the BPM it was recorded at (auto-filled from the currently playing song,
-  or editable by hand).
+- **Built-in recorder**: captures the live (post-limiter, post-effects)
+  output via `MediaRecorder`, with an in-page player and a "⋮" menu per take
+  (save / delete). Each take remembers the BPM it was recorded at (defaults
+  to the "共通テンポ" field; editable by hand).
 - **Tempo sync**: re-renders any recorded take to a common "共通テンポ"
   target BPM using the browser's own pitch-preserving time-stretch
   (`HTMLMediaElement.preservesPitch` + `playbackRate`, captured back to a
-  file), so takes recorded at different tempos (e.g. two different AI
-  Composer generations) end up at the same speed.
+  file), so takes recorded at different tempos end up at the same speed.
 - **Mixing**: select two or more recorded takes and mix them down to a
   single WAV file (decoded and summed offline via `OfflineAudioContext` —
   fast, no real-time wait). Typical flow: tempo-sync each take to the same
   BPM first, then mix them together.
-- **AI Composer**: type a free-text prompt (mood, scene, tempo — Japanese or
-  English) and get a procedurally generated song built from it — chord
-  progression, melody, tempo, and patch all derived from the prompt (see
-  "AI Composer" below). "🎲 別バージョン" regenerates a different take on
-  the same prompt. Anything it plays can be recorded, tempo-synced, and
-  mixed exactly like live playing.
 - Installable PWA: manifest, service worker (offline after first load),
   maskable/adaptive icons.
-
-## AI Composer
-
-`src/audio/aiCompose.ts` implements `composePromptSong(prompt)`, a small
-**on-device, rule-based generator** — not a call to a hosted LLM/generative-
-audio API, and **entirely free to run**: it's plain client-side JavaScript
-executed in your own browser, with no network request, no API key, no
-account, and no usage limit or cost of any kind. As a static GitHub Pages
-site, this app has no backend to hold an API key, and calling a commercial
-AI API directly from client-side JS would expose it publicly, so instead the
-"AI" here is a deterministic algorithm that:
-
-1. Scans the prompt text for mood/keyword signals (energy, valence
-   bright/dark, ambience, complexity — both Japanese and English keywords
-   are recognized, e.g. 悲しい/sad, 楽しい/happy, 静か/calm, 速い/fast, 広
-   い/open) and falls back to a pseudo-random mood if nothing matches, so
-   any input still produces a distinct song.
-2. Hashes the prompt to seed a PRNG (`mulberry32`), so the **same prompt
-   always produces the same song** — this is what makes results
-   reproducible rather than a black box; "🎲 別バージョン" reseeds with a
-   variation counter for a different take on the same prompt.
-3. Picks a key, scale (major for a bright/positive mood, minor otherwise),
-   chord progression, tempo, and a biased-random-walk melody, then derives
-   the oscillator waveforms, filter, envelopes, and delay from the same mood
-   values (e.g. brighter → higher cutoff/saw waves, calmer → longer
-   attack/release, more "open" → more delay).
-4. Returns a `Song` (patch + note events) that plays through the same
-   `SequencerPlayer` used for live playing, so it can be recorded,
-   tempo-synced, and mixed exactly like anything else in the app.
 
 ## Project layout
 
@@ -113,16 +81,14 @@ index.html, src/main.ts        entry point
 src/audio/
   types.ts                     Patch shape + default patch
   presets.ts                   factory presets
-  composeUtils.ts               shared note/chord/clock helpers used by aiCompose.ts
-  aiCompose.ts                  prompt -> Song: on-device rule-based "AI composer"
-  Sequencer.ts                 schedules a Song's notes onto a SynthEngine
   AudioTools.ts                 offline tempo-sync (playbackRate + preservesPitch,
                                 captured via MediaRecorder) and clip mixing
                                 (OfflineAudioContext + WAV encoder)
   Envelope.ts                  control-rate ADSR
   Voice.ts                     one polyphonic voice's Web Audio node graph
-  SynthEngine.ts                AudioContext, voice pool, LFO, delay, master chain,
-                                analyser + MediaStream tap for recording
+  SynthEngine.ts                AudioContext, voice pool, LFO, effects chain
+                                (distortion/chorus/delay/tremolo), master
+                                chain, analyser + MediaStream tap for recording
 src/ui/
   Knob.ts, Keyboard.ts         reusable pointer-driven controls
   VuMeter.ts                   segmented LED level meter

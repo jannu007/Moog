@@ -48,6 +48,16 @@ export interface Patch {
   delayTimeSec: number;
   delayFeedback: number;
 
+  distortionAmount: number; // 0..1
+  distortionMix: number; // 0..1
+
+  chorusRateHz: number;
+  chorusDepthMs: number;
+  chorusMix: number; // 0..1
+
+  tremoloRateHz: number;
+  tremoloDepth: number; // 0..1
+
   masterVolume: number;
 }
 
@@ -89,6 +99,13 @@ export function defaultPatch(name = 'Init'): Patch {
     delayMix: 0,
     delayTimeSec: 0.32,
     delayFeedback: 0.35,
+    distortionAmount: 0,
+    distortionMix: 0,
+    chorusRateHz: 0.8,
+    chorusDepthMs: 4,
+    chorusMix: 0,
+    tremoloRateHz: 4,
+    tremoloDepth: 0,
     masterVolume: 0.8,
   };
 }

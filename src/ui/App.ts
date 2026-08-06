@@ -1,7 +1,5 @@
 import { SynthEngine } from '../audio/SynthEngine';
 import { factoryPresets } from '../audio/presets';
-import { SequencerPlayer, type Song } from '../audio/Sequencer';
-import { composePromptSong } from '../audio/aiCompose';
 import { defaultPatch, type FilterMode, type Patch, type Waveform } from '../audio/types';
 import { createKnob } from './Knob';
 import { createKeyboard } from './Keyboard';
@@ -17,7 +15,6 @@ export function mountApp(root: HTMLElement): void {
   const patch: Patch = defaultPatch('Drift Lead');
   Object.assign(patch, factoryPresets()[0]);
   const engine = new SynthEngine(patch);
-  const sequencer = new SequencerPlayer(engine);
 
   let lowestNote = 48;
 
@@ -60,7 +57,6 @@ export function mountApp(root: HTMLElement): void {
       chip.className = 'chip' + (p.name === patch.name ? ' selected' : '');
       chip.textContent = p.name;
       chip.addEventListener('click', () => {
-        sequencer.stop();
         Object.assign(patch, p);
         patchNameEl.textContent = `Patch: ${patch.name}`;
         refreshAllKnobs();
@@ -224,6 +220,40 @@ export function mountApp(root: HTMLElement): void {
   );
 
   panels.appendChild(
+    panel('DISTORTION', (p) => {
+      p.appendChild(
+        knobRow([
+          { label: 'AMOUNT', min: 0, max: 1, get: () => patch.distortionAmount, set: (v) => (patch.distortionAmount = v) },
+          { label: 'MIX', min: 0, max: 1, get: () => patch.distortionMix, set: (v) => (patch.distortionMix = v) },
+        ])
+      );
+    })
+  );
+
+  panels.appendChild(
+    panel('CHORUS', (p) => {
+      p.appendChild(
+        knobRow([
+          { label: 'RATE', min: 0.05, max: 5, get: () => patch.chorusRateHz, set: (v) => (patch.chorusRateHz = v), format: (v) => `${v.toFixed(2)}Hz` },
+          { label: 'DEPTH', min: 0, max: 15, get: () => patch.chorusDepthMs, set: (v) => (patch.chorusDepthMs = v), format: (v) => `${v.toFixed(1)}ms` },
+          { label: 'MIX', min: 0, max: 1, get: () => patch.chorusMix, set: (v) => (patch.chorusMix = v) },
+        ])
+      );
+    })
+  );
+
+  panels.appendChild(
+    panel('TREMOLO', (p) => {
+      p.appendChild(
+        knobRow([
+          { label: 'RATE', min: 0.1, max: 20, get: () => patch.tremoloRateHz, set: (v) => (patch.tremoloRateHz = v), format: (v) => `${v.toFixed(2)}Hz` },
+          { label: 'DEPTH', min: 0, max: 1, get: () => patch.tremoloDepth, set: (v) => (patch.tremoloDepth = v) },
+        ])
+      );
+    })
+  );
+
+  panels.appendChild(
     panel('DELAY', (p) => {
       p.appendChild(
         knobRow([
@@ -241,85 +271,9 @@ export function mountApp(root: HTMLElement): void {
     })
   );
 
-  function playSong(song: Song, statusEl: HTMLElement, idleText: string, label: string) {
-    Object.assign(patch, song.patch);
-    patchNameEl.textContent = `Patch: ${label}`;
-    refreshAllKnobs();
-    renderPresets();
-    statusEl.textContent = `再生中: ${song.title} — ${song.subtitle}`;
-    sequencer.play(song, () => {
-      statusEl.textContent = idleText;
-    });
-  }
-
-  // --- AI composer: turns a free-text prompt into a procedurally generated song ---
-  const aiPanel = document.createElement('div');
-  aiPanel.className = 'ai-composer panel';
-  const aiTitle = document.createElement('div');
-  aiTitle.className = 'panel-title';
-  aiTitle.textContent = 'AI COMPOSER';
-  const aiHint = document.createElement('div');
-  aiHint.className = 'ai-hint';
-  aiHint.textContent = '例: 「悲しい冬の夜」「楽しく踊れる曲」「静かな朝の海辺」— キーワードから曲想・テンポ・音色を自動生成します。';
-  const aiRow = document.createElement('div');
-  aiRow.className = 'ai-row';
-  const aiInput = document.createElement('input');
-  aiInput.type = 'text';
-  aiInput.className = 'ai-prompt-input';
-  aiInput.placeholder = '曲のイメージを入力…';
-  aiInput.maxLength = 80;
-  const aiGenerateBtn = document.createElement('button');
-  aiGenerateBtn.className = 'chip chip-song';
-  aiGenerateBtn.textContent = '🎼 作曲して再生';
-  const aiRerollBtn = document.createElement('button');
-  aiRerollBtn.className = 'chip';
-  aiRerollBtn.textContent = '🎲 別バージョン';
-  const aiStopBtn = document.createElement('button');
-  aiStopBtn.className = 'chip chip-stop';
-  aiStopBtn.textContent = '■ 停止';
-  aiRow.appendChild(aiInput);
-  aiRow.appendChild(aiGenerateBtn);
-  aiRow.appendChild(aiRerollBtn);
-  aiRow.appendChild(aiStopBtn);
-  const aiStatus = document.createElement('div');
-  aiStatus.className = 'song-status';
-  const AI_IDLE_TEXT = 'AI作曲: 未生成';
-  aiStatus.textContent = AI_IDLE_TEXT;
-
-  let variationSeed = 0;
-  function generateAndPlay() {
-    const promptText = aiInput.value;
-    const seeded = variationSeed > 0 ? `${promptText}#${variationSeed}` : promptText;
-    const song = composePromptSong(seeded);
-    playSong(song, aiStatus, AI_IDLE_TEXT, `AI: ${song.title}`);
-  }
-  aiGenerateBtn.addEventListener('click', () => {
-    variationSeed = 0;
-    generateAndPlay();
-  });
-  aiRerollBtn.addEventListener('click', () => {
-    variationSeed += 1;
-    generateAndPlay();
-  });
-  aiStopBtn.addEventListener('click', () => {
-    sequencer.stop();
-    aiStatus.textContent = AI_IDLE_TEXT;
-  });
-  aiInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') {
-      variationSeed = 0;
-      generateAndPlay();
-    }
-  });
-
-  aiPanel.appendChild(aiTitle);
-  aiPanel.appendChild(aiHint);
-  aiPanel.appendChild(aiRow);
-  aiPanel.appendChild(aiStatus);
-
   const recorder = createRecorder(
     () => engine.getRecordingStream(),
-    () => sequencer.playingSong?.bpm ?? null
+    () => null
   );
 
   const octRow = document.createElement('div');
@@ -368,7 +322,6 @@ export function mountApp(root: HTMLElement): void {
   root.appendChild(header);
   root.appendChild(presetRow);
   root.appendChild(panels);
-  root.appendChild(aiPanel);
   root.appendChild(recorder.el);
   root.appendChild(octRow);
   root.appendChild(keyboardHandle.el);
@@ -376,10 +329,7 @@ export function mountApp(root: HTMLElement): void {
   root.appendChild(overlay);
 
   document.addEventListener('visibilitychange', () => {
-    if (document.hidden) {
-      sequencer.stop();
-      engine.allNotesOff();
-    }
+    if (document.hidden) engine.allNotesOff();
   });
 }
 
