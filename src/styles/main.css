@@ -134,29 +134,6 @@ body {
   box-shadow: 0 0 4px var(--led-red);
 }
 
-/* ---------- start overlay ---------- */
-
-.start-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(10, 6, 3, 0.94);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 50;
-}
-.start-overlay button {
-  background: linear-gradient(180deg, var(--accent-hi), var(--accent));
-  color: var(--ink);
-  border: none;
-  padding: 16px 32px;
-  font-size: 18px;
-  font-weight: 700;
-  border-radius: 12px;
-  cursor: pointer;
-  box-shadow: 0 4px 0 #164a68, 0 6px 14px #0008;
-}
-
 /* ---------- chips (buttons) ---------- */
 
 .preset-row,

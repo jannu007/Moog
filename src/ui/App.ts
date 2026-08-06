@@ -20,16 +20,14 @@ export function mountApp(root: HTMLElement): void {
 
   root.innerHTML = '';
 
-  const overlay = document.createElement('div');
-  overlay.className = 'start-overlay';
-  const startBtn = document.createElement('button');
-  startBtn.textContent = '▶ NovaWave Synth を起動';
-  overlay.appendChild(startBtn);
-  startBtn.addEventListener('click', async () => {
-    await engine.start();
-    overlay.remove();
-    vu.start(() => engine.getAnalyser());
-  });
+  document.addEventListener(
+    'pointerdown',
+    async () => {
+      await engine.start();
+      vu.start(() => engine.getAnalyser());
+    },
+    { once: true }
+  );
 
   const header = document.createElement('div');
   header.className = 'header';
@@ -333,7 +331,6 @@ export function mountApp(root: HTMLElement): void {
   root.appendChild(octRow);
   root.appendChild(keyboardHandle.el);
   root.appendChild(hint);
-  root.appendChild(overlay);
 
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) engine.allNotesOff();

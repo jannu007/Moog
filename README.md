@@ -109,8 +109,8 @@ npm run preview   # serve the production build locally
 ```
 
 Requires a user gesture to start audio (browsers block autoplay) — the app
-shows a "▶ NovaWave Synth を起動" overlay on load; tapping it creates/resumes
-the `AudioContext`.
+creates/resumes the `AudioContext` on the first tap/click anywhere on the
+page, with no separate start screen.
 
 ## Deploying to GitHub Pages
 
