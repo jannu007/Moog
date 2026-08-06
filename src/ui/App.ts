@@ -66,8 +66,12 @@ export function mountApp(root: HTMLElement): void {
     }
   }
 
+  const panelsWrap = document.createElement('div');
+  panelsWrap.className = 'panels-wrap';
   const panels = document.createElement('div');
-  panels.className = 'panels';
+  panels.className = 'panels-row';
+  const fxPanels = document.createElement('div');
+  fxPanels.className = 'panels-row';
 
   const knobSetters: Array<() => void> = [];
 
@@ -219,7 +223,7 @@ export function mountApp(root: HTMLElement): void {
     })
   );
 
-  panels.appendChild(
+  fxPanels.appendChild(
     panel('DISTORTION', (p) => {
       p.appendChild(
         knobRow([
@@ -230,7 +234,7 @@ export function mountApp(root: HTMLElement): void {
     })
   );
 
-  panels.appendChild(
+  fxPanels.appendChild(
     panel('CHORUS', (p) => {
       p.appendChild(
         knobRow([
@@ -242,7 +246,7 @@ export function mountApp(root: HTMLElement): void {
     })
   );
 
-  panels.appendChild(
+  fxPanels.appendChild(
     panel('TREMOLO', (p) => {
       p.appendChild(
         knobRow([
@@ -253,7 +257,7 @@ export function mountApp(root: HTMLElement): void {
     })
   );
 
-  panels.appendChild(
+  fxPanels.appendChild(
     panel('DELAY', (p) => {
       p.appendChild(
         knobRow([
@@ -265,7 +269,7 @@ export function mountApp(root: HTMLElement): void {
     })
   );
 
-  panels.appendChild(
+  fxPanels.appendChild(
     panel('MASTER', (p) => {
       p.appendChild(knobRow([{ label: 'VOL', min: 0, max: 1, get: () => patch.masterVolume, set: (v) => (patch.masterVolume = v) }]));
     })
@@ -319,9 +323,12 @@ export function mountApp(root: HTMLElement): void {
   updateNoteReadout();
   renderPresets();
 
+  panelsWrap.appendChild(panels);
+  panelsWrap.appendChild(fxPanels);
+
   root.appendChild(header);
   root.appendChild(presetRow);
-  root.appendChild(panels);
+  root.appendChild(panelsWrap);
   root.appendChild(recorder.el);
   root.appendChild(octRow);
   root.appendChild(keyboardHandle.el);

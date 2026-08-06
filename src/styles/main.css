@@ -199,7 +199,13 @@ body {
 
 /* ---------- panels ---------- */
 
-.panels {
+.panels-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.panels-row {
   display: flex;
   gap: 8px;
   overflow-x: auto;
@@ -536,7 +542,8 @@ body {
 }
 
 @media (max-width: 640px) {
-  .panels {
+  .panels-wrap,
+  .panels-row {
     gap: 6px;
   }
   .panel {
