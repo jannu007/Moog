@@ -1,0 +1,8 @@
+[{
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": "com.novawave.synth",
+        "sha256_cert_fingerprints": ["27:D7:ED:27:3D:BF:2F:31:1D:59:C9:EE:E7:37:4E:7F:C5:66:D5:FF:44:46:C8:AA:04:4F:0C:F3:57:45:B6:02"]
+      }
+    }]
