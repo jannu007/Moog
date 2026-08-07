@@ -64,12 +64,18 @@ export function mountApp(root: HTMLElement): void {
     }
   }
 
-  const panelsWrap = document.createElement('div');
-  panelsWrap.className = 'panels-wrap';
   const panels = document.createElement('div');
   panels.className = 'panels-row';
+
+  const fxColumn = document.createElement('div');
+  fxColumn.className = 'fx-column panel';
+  const fxColumnTitle = document.createElement('div');
+  fxColumnTitle.className = 'panel-title';
+  fxColumnTitle.textContent = 'EFFECTS';
+  fxColumn.appendChild(fxColumnTitle);
   const fxPanels = document.createElement('div');
-  fxPanels.className = 'panels-row';
+  fxPanels.className = 'fx-list';
+  fxColumn.appendChild(fxPanels);
 
   const knobSetters: Array<() => void> = [];
 
@@ -278,6 +284,12 @@ export function mountApp(root: HTMLElement): void {
     () => null
   );
 
+  const trackEffectsRow = document.createElement('div');
+  trackEffectsRow.className = 'track-effects-row';
+  recorder.el.classList.add('track-column');
+  trackEffectsRow.appendChild(recorder.el);
+  trackEffectsRow.appendChild(fxColumn);
+
   const octRow = document.createElement('div');
   octRow.className = 'oct-row';
   const octDown = document.createElement('button');
@@ -321,13 +333,10 @@ export function mountApp(root: HTMLElement): void {
   updateNoteReadout();
   renderPresets();
 
-  panelsWrap.appendChild(panels);
-  panelsWrap.appendChild(fxPanels);
-
   root.appendChild(header);
   root.appendChild(presetRow);
-  root.appendChild(panelsWrap);
-  root.appendChild(recorder.el);
+  root.appendChild(panels);
+  root.appendChild(trackEffectsRow);
   root.appendChild(octRow);
   root.appendChild(keyboardHandle.el);
   root.appendChild(hint);

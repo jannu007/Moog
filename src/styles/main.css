@@ -182,12 +182,6 @@ body {
 
 /* ---------- panels ---------- */
 
-.panels-wrap {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
 .panels-row {
   display: flex;
   gap: 8px;
@@ -316,6 +310,48 @@ body {
   color: #9fc3d6;
   font-size: 12px;
   font-family: 'Consolas', monospace;
+}
+
+/* ---------- track + effects ---------- */
+
+.track-effects-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.track-column {
+  flex: 1;
+  min-width: 0;
+}
+
+.fx-column {
+  flex-shrink: 0;
+  width: 160px;
+}
+
+.fx-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.fx-list .panel {
+  min-width: 0;
+  width: 100%;
+}
+
+.fx-list .knob-row {
+  flex-wrap: wrap;
+}
+
+@media (max-width: 640px) {
+  .track-effects-row {
+    flex-direction: column;
+  }
+  .fx-column {
+    width: 100%;
+  }
 }
 
 /* ---------- recorder ---------- */
@@ -525,8 +561,9 @@ body {
 }
 
 @media (max-width: 640px) {
-  .panels-wrap,
-  .panels-row {
+  .panels-row,
+  .fx-list,
+  .track-effects-row {
     gap: 6px;
   }
   .panel {
