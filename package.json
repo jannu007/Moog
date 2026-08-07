@@ -10,6 +10,9 @@
     "preview": "vite preview --port 4173"
   },
   "devDependencies": {
+    "@capacitor/android": "^8.5.0",
+    "@capacitor/cli": "^8.5.0",
+    "@capacitor/core": "^8.5.0",
     "typescript": "^5.5.4",
     "vite": "^5.4.2"
   }

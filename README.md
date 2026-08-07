@@ -13,7 +13,12 @@ project.
 on an Android phone (or desktop), and the browser offers "Install app" /
 "Add to Home screen" — no APK, no Play Store listing, no build step for the
 end user. A from-scratch native Android (Kotlin/Compose) build also lives in
-`android/` for anyone who wants that instead — see `android/README.md`.
+`android/` for anyone who wants that instead — see `android/README.md` (that
+project was never build-verified — see its README for details).
+
+For actually publishing to Google Play, use the **Capacitor-based** Android
+project in `android-capacitor/` instead (wraps the same Vite web app that's
+already built and tested) — see the "Google Play への公開" section below.
 
 ## Try it
 
@@ -97,6 +102,7 @@ src/ui/
 src/styles/main.css            analog-hardware look (wood/metal/chrome)
 public/                        manifest.webmanifest, sw.js, icons
 android/                       optional native Kotlin/Compose build (see android/README.md)
+android-capacitor/             Capacitor-generated Android project used for Google Play builds
 ```
 
 ## Development
@@ -111,6 +117,37 @@ npm run preview   # serve the production build locally
 Requires a user gesture to start audio (browsers block autoplay) — the app
 shows a "▶ NovaWave Synth を起動" overlay on load; tapping it creates/resumes
 the `AudioContext`.
+
+## Google Play への公開（Android AAB ビルド）
+
+`android-capacitor/` は [Capacitor](https://capacitorjs.com/) で生成した
+Android ネイティブプロジェクトです（`android/` の手書き Kotlin 実装とは別物）。
+`.github/workflows/android-release.yml`（GitHub Actions、手動実行
+`workflow_dispatch`）が Web アセットのビルドから署名済み `.aab`
+（Android App Bundle）の生成までを行います。ローカルに Android SDK がなくても
+CI 上でビルドできます。
+
+事前に GitHub リポジトリの **Settings → Secrets and variables → Actions** に
+以下の Secrets を登録してください（署名鍵の作り方は
+[jannu007/GooglePlay](https://github.com/jannu007/GooglePlay) の公開ガイド参照）。
+
+- `ANDROID_KEYSTORE_BASE64` … リリース用 keystore ファイルを base64 化したもの
+- `ANDROID_KEYSTORE_PASSWORD`
+- `ANDROID_KEY_ALIAS`
+- `ANDROID_KEY_PASSWORD`
+
+ワークフローを実行すると `novawave-synth-release-aab` という Artifact に
+`app-release.aab` が生成されます。これを Google Play Console の
+「製品版」トラックにアップロードして審査に出せます。
+
+ローカルで動作確認したい場合:
+
+```bash
+npm install
+npm run build
+npx cap sync android
+npx cap open android   # Android Studio が必要
+```
 
 ## Deploying to GitHub Pages
 
